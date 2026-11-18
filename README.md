@@ -6,7 +6,7 @@ Projeto de automação com inteligência artificial que transforma as respostas 
 
 1. As respostas são registradas em um **Google Forms**.
 2. Elas chegam em uma **planilha do Google Sheets**.
-3. Um script em **Google Apps Script** valida os dados, calcula os níveis por bloco e envia o resultado para uma **API de IA** (Gemini, no plano gratuito).
+3. Um script em **Google Apps Script** lê a resposta, converte as notas, aplica as regras do protocolo (completude e polaridade dos itens) e envia o resultado já calculado para uma **API de IA** (Gemini, no plano gratuito).
 4. A IA redige o texto do relatório com base apenas nos dados calculados, e o script gera um **documento do Google Docs**.
 5. O profissional abre o documento, revisa, edita e assina.
 
@@ -33,7 +33,19 @@ As limitações do protocolo estão descritas em [docs/protocolo.md](docs/protoc
 
 ## Status
 
-Em desenvolvimento. Fase atual: **Fase 1** (protocolo fictício e estrutura do relatório) concluída; próxima: **Fase 2** (Google Forms e planilha).
+Em desenvolvimento.
+
+- Fase 0: preparação (concluída)
+- Fase 1: protocolo fictício e estrutura do relatório (concluída)
+- Fase 2: formulário e planilha de respostas (concluída)
+- Fase 3: leitura e organização dos dados com Apps Script (em andamento)
+- Próximas: cálculo dos níveis por bloco, chamada à IA, geração do relatório em Google Docs, testes e publicação
+
+## Estrutura do repositório
+
+- `docs/protocolo.md`: protocolo fictício, regras de cálculo, estrutura do relatório e limitações
+- `docs/diario-de-bordo.md`: registro de cada fase, dos erros encontrados e do que aprendi
+- `src/Codigo.gs`: código do Apps Script (sem chaves ou dados reais)
 
 ## Documentação do processo
 
