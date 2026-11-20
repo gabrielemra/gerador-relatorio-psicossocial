@@ -94,8 +94,13 @@ Cada item tem uma polaridade, informada junto com a resposta. A IA nunca deduz a
 
 ## 8. Limitações conhecidas
 
-- **Instrumento não validado.** As 22 perguntas são fictícias. Em uso real, a Resolução CFP nº 14/2023 exige evidências de validade e confiabilidade dos instrumentos psicológicos usados na avaliação.
-- **Individual x coletivo.** No protótipo o relatório é por avaliação. Em uso real, a análise é por GHE, com um mínimo de respondentes para proteger o anonimato (o número é decisão do profissional).
-- **Classificação de risco.** A NR-1 (item 1.5.4.4) exige gradação por severidade e probabilidade, e a probabilidade considera as exigências da atividade (1.5.4.4.5.3) e as medidas de prevenção existentes. Este protocolo entrega apenas um nível de atenção preliminar.
+- **Instrumento não validado.** As 22 perguntas são fictícias. A Resolução CFP nº 14/2023 exige evidências de validade e confiabilidade nos instrumentos psicológicos usados na avaliação de riscos psicossociais.
+- **Questionário não basta.** Segundo o MTE (Perguntas e Respostas sobre o capítulo 1.5, 2026), o uso isolado de questionários não comprova a gestão dos riscos psicossociais: os resultados precisam de análise técnica e de integração ao gerenciamento de riscos (AEP da NR-17, inventário e plano de ação). Este projeto automatiza apenas uma etapa de apoio.
+- **Viés de resposta.** Em autorrelato, o receio de retaliação e a desejabilidade social podem reduzir a sinceridade das respostas. Em uso real, isso exige anonimato e sigilo garantidos, uso não punitivo dos dados, participação dos trabalhadores e devolutiva coletiva.
+- **Individual x coletivo.** No protótipo o relatório é por avaliação. Em uso real, a análise é por GHE, com um mínimo de respondentes para proteger o anonimato (o número é decisão do profissional). Setor, cargo e turno juntos podem identificar pessoas em grupos pequenos.
+- **Classificação de risco.** A NR-1 (item 1.5.4.4) exige gradação por severidade e probabilidade, e a probabilidade considera as exigências da atividade e a eficácia das medidas de prevenção (1.5.4.4.5.3). Este protocolo entrega apenas um nível de atenção preliminar, com regras provisórias a validar pela profissional.
+- **Escopo.** A NR-1 (1.5.3.2.1) pede que as condições de trabalho sejam consideradas nos termos da NR-17. O autorrelato cobre só uma parte disso, e a análise do trabalho real é do profissional.
+- **Cobertura dos fatores.** Os 13 fatores do Guia do MTE têm ao menos um item, mas "trabalho remoto e isolado" só é coberto em parte (item 13). A avaliação deve considerar trabalho presencial, remoto e híbrido.
+- **Tipo de documento.** O documento final (relatório, laudo ou atestado psicológico) segue a Resolução CFP nº 06/2019 e é decisão do profissional. Este protótipo gera apenas um rascunho.(1.5.4.4.5.3) e as medidas de prevenção existentes. Este protocolo entrega apenas um nível de atenção preliminar.
 - **Escopo.** A NR-1 (1.5.3.2.1) pede que as condições de trabalho sejam consideradas nos termos da NR-17. O autorrelato cobre só uma parte disso; a análise do trabalho real é do profissional.
 - **Metodologia.** Segundo fontes que li sobre o Guia do MTE, não há metodologia única para o levantamento, e os resultados entram na avaliação ergonômica preliminar e/ou no inventário de riscos. Confirme no documento original.
