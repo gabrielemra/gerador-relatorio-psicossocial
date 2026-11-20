@@ -16,12 +16,14 @@ Projeto de automação com inteligência artificial que transforma as respostas 
 - O protocolo é **fictício e não validado**. Ele é inspirado nos fatores de risco psicossociais do Guia do MTE e no capítulo 1.5 da NR-1, mas **não comprova conformidade** com a norma.
 - O relatório é um **rascunho**. A IA não faz diagnóstico, não emite parecer nem laudo. A análise e a responsabilidade técnica são do profissional.
 - Os cálculos são feitos pelo script. A IA só redige o texto e deve se basear **somente nos dados recebidos**, sem inferir além deles.
+- Questionário isolado não comprova a gestão de riscos psicossociais. Este projeto automatiza apenas uma etapa de apoio ao levantamento, e os resultados exigem análise técnica do profissional.
 
 ## Referências normativas
 
-- NR-1, capítulo 1.5 (Gerenciamento de Riscos Ocupacionais), conforme a Portaria MTE nº 1.419/2024
-- Guia de fatores de riscos psicossociais relacionados ao trabalho, do MTE
-- Resolução CFP nº 14/2023, sobre a atuação de psicólogas(os) na avaliação de riscos psicossociais relacionados ao trabalho
+- NR-1, capítulo 1.5 (Gerenciamento de Riscos Ocupacionais), conforme a Portaria MTE nº 1.419/2024, com vigência prevista para 26/05/2026 (Portaria MTE nº 765/2025)
+- Guia de informações sobre os fatores de riscos psicossociais relacionados ao trabalho (MTE, 2025)
+- Manual de interpretação e aplicação do capítulo 1.5 da NR-1, GRO/PGR (MTE, 2026)
+- Resolução CFP nº 14/2023 (versão comentada), sobre a atuação de psicólogas(os) na avaliação de riscos psicossociais relacionados ao trabalho
 
 As limitações do protocolo estão descritas em [docs/protocolo.md](docs/protocolo.md).
 
