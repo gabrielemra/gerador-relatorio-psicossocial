@@ -5,7 +5,7 @@
 // ------------------------------------------------------------
 // 1. DADOS FIXOS (o protocolo)
 // ------------------------------------------------------------
-// Cada item do protocolo: número, bloco, polaridade (R = risco, P = proteção)
+// Cada item: número, bloco, polaridade (R = risco, P = proteção)
 // e, quando for o caso, se é um item sensível (assédio, violência, trauma).
 const PROTOCOLO = [
   { id: 1, bloco: 1, pol: 'R' }, { id: 2, bloco: 1, pol: 'R' }, { id: 3, bloco: 1, pol: 'P' },
@@ -21,7 +21,7 @@ const PROTOCOLO = [
 ];
 
 // ------------------------------------------------------------
-// 2. FUNÇÕES AUXILIARES
+// 2. FUNÇÕES AUXILIARES (pequenas, fazem uma coisa só)
 // ------------------------------------------------------------
 
 // Converte o texto da célula ("5. Sempre") em número de 1 a 5.
@@ -41,6 +41,45 @@ function converterNota(texto) {
   }
 
   return nota;
+}
+
+// Combina polaridade e nota no status do item:
+// 'critico', 'alerta', 'adequado', 'protetor' ou 'NR' (não respondido).
+function statusItem(pol, nota) {
+  // 1. Item não respondido
+  if (nota === null || nota === undefined) {
+    return 'NR';
+  }
+
+  // 2. Nota inválida: melhor parar com erro claro do que gerar relatório errado
+  if (!Number.isInteger(nota) || nota < 1 || nota > 5) {
+    throw new Error('Nota inválida em statusItem: ' + nota);
+  }
+
+  // 3. Polaridade 'R' (risco): 4 ou 5 -> 'critico', 3 -> 'alerta', 1 ou 2 -> 'adequado'
+  if (pol === 'R') {
+    if (nota >= 4) {
+      return 'critico';
+    }
+    if (nota === 3) {
+      return 'alerta';
+    }
+    return 'adequado';
+  }
+
+  // 4. Polaridade 'P' (proteção): 4 ou 5 -> 'protetor', 3 -> 'alerta', 1 ou 2 -> 'critico'
+  if (pol === 'P') {
+    if (nota >= 4) {
+      return 'protetor';
+    }
+    if (nota === 3) {
+      return 'alerta';
+    }
+    return 'critico';
+  }
+
+  // 5. Polaridade desconhecida: erro explícito
+  throw new Error('Polaridade inválida em statusItem: ' + pol);
 }
 
 // ------------------------------------------------------------
@@ -102,6 +141,38 @@ function testarConverterNota() {
   Logger.log(converterNota('  4. Frequentemente'));    // esperado: 4
 }
 
+function testarStatusItem() {
+  Logger.log(statusItem('R', 5));      // esperado: critico
+  Logger.log(statusItem('R', 3));      // esperado: alerta
+  Logger.log(statusItem('R', 1));      // esperado: adequado
+  Logger.log(statusItem('P', 1));      // esperado: critico
+  Logger.log(statusItem('P', 3));      // esperado: alerta
+  Logger.log(statusItem('P', 5));      // esperado: protetor
+  Logger.log(statusItem('R', null));   // esperado: NR
+
+  // Casos que devem gerar erro (o try/catch evita parar o teste)
+  try {
+    statusItem('X', 3);
+  } catch (e) {
+    Logger.log('erro esperado: ' + e.message);
+  }
+  try {
+    statusItem('R', 9);
+  } catch (e) {
+    Logger.log('erro esperado: ' + e.message);
+  }
+}
+
 function testarMontagem() {
   Logger.log(JSON.stringify(montarAvaliacao(), null, 2));
+}
+
+// Mostra, item a item, a nota e o status da última resposta.
+function testarStatusDaUltimaResposta() {
+  const avaliacao = montarAvaliacao();
+  Logger.log('Avaliação: ' + avaliacao.contexto.id);
+  avaliacao.itens.forEach(item => {
+    Logger.log('Item ' + item.id + ' (' + item.pol + ') nota ' + item.nota +
+               ' -> ' + statusItem(item.pol, item.nota));
+  });
 }
