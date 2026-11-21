@@ -73,7 +73,7 @@ Cada item tem uma polaridade, informada junto com a resposta. A IA nunca deduz a
 5. Diretrizes para plano de ação organizacional, cada medida ligada ao fator que a originou
 6. Limitações dos dados (itens NR e seu impacto)
 7. Parecer e validação do profissional (campo em branco)
-8. Nota técnica fixa: "Rascunho gerado com apoio de inteligência artificial a partir de autorrelato estruturado. Não constitui diagnóstico nem laudo psicológico. Validade condicionada à análise e à responsabilidade do profissional habilitado."
+8. Nota técnica fixa: "Rascunho gerado com apoio de inteligência artificial a partir de autorrelato estruturado. Não constitui diagnóstico nem laudo psicológico. Não substitui os protocolos de acolhimento e encaminhamento da organização nem a atuação imediata do profissional diante de relatos de violência. Validade condicionada à análise e à responsabilidade do profissional habilitado."
 
 ## 6. Regras para o prompt da IA
 
@@ -102,5 +102,7 @@ Cada item tem uma polaridade, informada junto com a resposta. A IA nunca deduz a
 - **Escopo.** A NR-1 (1.5.3.2.1) pede que as condições de trabalho sejam consideradas nos termos da NR-17. O autorrelato cobre só uma parte disso, e a análise do trabalho real é do profissional.
 - **Cobertura dos fatores.** Os 13 fatores do Guia do MTE têm ao menos um item, mas "trabalho remoto e isolado" só é coberto em parte (item 13). A avaliação deve considerar trabalho presencial, remoto e híbrido.
 - **Tipo de documento.** O documento final (relatório, laudo ou atestado psicológico) segue a Resolução CFP nº 06/2019 e é decisão do profissional. Este protótipo gera apenas um rascunho.(1.5.4.4.5.3) e as medidas de prevenção existentes. Este protocolo entrega apenas um nível de atenção preliminar.
+- **Relatos de violência.** Itens sensíveis críticos (assédio, discriminação, violência, situação traumática) apontam um relato que merece atenção imediata. O relatório não substitui os protocolos de acolhimento e encaminhamento da organização nem a atuação imediata do profissional diante desses relatos, que não devem aguardar a geração de um documento.
+- **Complemento, não substituto.** O relatório é um apoio à análise do profissional e não dispensa a entrevista, a observação do trabalho real e o julgamento técnico.
 - **Escopo.** A NR-1 (1.5.3.2.1) pede que as condições de trabalho sejam consideradas nos termos da NR-17. O autorrelato cobre só uma parte disso; a análise do trabalho real é do profissional.
 - **Metodologia.** Segundo fontes que li sobre o Guia do MTE, não há metodologia única para o levantamento, e os resultados entram na avaliação ergonômica preliminar e/ou no inventário de riscos. Confirme no documento original.
