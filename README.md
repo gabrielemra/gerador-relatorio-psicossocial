@@ -27,6 +27,7 @@ Projeto de automação com inteligência artificial que transforma as respostas 
 - O relatório é um **rascunho**. A IA não faz diagnóstico, não emite parecer nem laudo. A análise e a responsabilidade técnica são do profissional.
 - Questionário isolado não comprova a gestão de riscos psicossociais. Este projeto automatiza apenas uma etapa de apoio ao levantamento, e os resultados exigem análise técnica do profissional.
 - Os cálculos são feitos pelo script. A IA só redige o texto e deve se basear **somente nos dados recebidos**, sem inferir além deles.
+- O relatório não substitui a análise do profissional nem os protocolos de acolhimento e encaminhamento da organização diante de relatos de violência.
 
 ## Referências normativas
 
