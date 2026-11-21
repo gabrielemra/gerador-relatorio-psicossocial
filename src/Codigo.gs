@@ -20,6 +20,43 @@ const PROTOCOLO = [
   { id: 21, bloco: 5, pol: 'R' }, { id: 22, bloco: 5, pol: 'R' }
 ];
 
+const NOMES_BLOCOS = {
+  1: 'Demandas de trabalho',
+  2: 'Controle, clareza de papel e mudanças',
+  3: 'Apoio e relações',
+  4: 'Violência, assédio, justiça e reconhecimento',
+  5: 'Repercussão percebida'
+};
+
+const FREQUENCIAS = {
+  1: 'Nunca', 2: 'Raramente', 3: 'Às vezes', 4: 'Frequentemente', 5: 'Sempre'
+};
+
+const TEXTOS_ITENS = {
+  1: 'Preciso trabalhar em ritmo muito acelerado para cumprir metas ou prazos.',
+  2: 'Minha jornada ultrapassa o horário combinado ou invade meu descanso.',
+  3: 'Tenho tempo e recursos adequados para fazer meu trabalho com segurança e qualidade.',
+  4: 'Meu trabalho exige lidar com situações emocionalmente desgastantes sem suporte adequado.',
+  5: 'Minhas tarefas são tão monótonas ou abaixo da minha capacidade que me desmotivam.',
+  6: 'Tenho clareza sobre minhas responsabilidades e o que se espera de mim.',
+  7: 'Tenho autonomia para organizar a ordem e o ritmo das minhas atividades.',
+  8: 'Recebo ordens ou demandas contraditórias de pessoas ou setores diferentes.',
+  9: 'Sou informado(a) ou consultado(a) com antecedência sobre mudanças que afetam meu trabalho.',
+  10: 'Recebo apoio da minha liderança direta quando enfrento dificuldades.',
+  11: 'Há cooperação e respeito entre os membros da minha equipe.',
+  12: 'Sinto segurança para relatar erros ou problemas sem medo de retaliação.',
+  13: 'Tenho dificuldade de comunicação com colegas ou chefia (isolamento, distância, ambiente que atrapalha).',
+  14: 'Sofro ou presencio humilhação, gritos, ameaças ou desrespeito de chefias ou colegas.',
+  15: 'Sofro ou presencio assédio sexual ou discriminação no trabalho.',
+  16: 'Sofro agressões, ameaças ou hostilidade de clientes, usuários ou público externo.',
+  17: 'Vivi ou presenciei no trabalho um acidente grave, violência ou situação traumática.',
+  18: 'Percebo que regras, avaliações e oportunidades são aplicadas de forma justa e transparente.',
+  19: 'Sinto que meu esforço é reconhecido (retorno, valorização, oportunidades).',
+  20: 'Sinto insegurança constante quanto ao meu emprego ou medo de punições arbitrárias.',
+  21: 'Sinto exaustão intensa ao fim da jornada, com dificuldade de me recuperar para o dia seguinte.',
+  22: 'Meu sono ou meu bem-estar emocional foram prejudicados pelas condições atuais do meu trabalho.'
+};
+
 // ------------------------------------------------------------
 // 2. FUNÇÕES AUXILIARES (pequenas, fazem uma coisa só)
 // ------------------------------------------------------------
@@ -173,6 +210,73 @@ function calcularNivelBloco(itens, numeroBloco) {
   };
 }
 
+// Monta o pacote de dados que será enviado à IA, já calculado.
+function montarPacote(avaliacao) {
+  const blocos = [1, 2, 3, 4, 5].map(numero => {
+    const resumo = calcularNivelBloco(avaliacao.itens, numero);
+    const insuficiente = resumo.nivel === 'Dados insuficientes';
+
+    // Todos os itens do bloco, com texto, frequência por extenso e natureza
+    const itensDoBloco = avaliacao.itens
+      .filter(item => item.bloco === numero)
+      .map(item => ({
+        id: item.id,
+        texto: TEXTOS_ITENS[item.id],
+        nota: item.nota,
+        frequencia: item.nota === null ? null : FREQUENCIAS[item.nota],
+        natureza: item.pol === 'R' ? 'fator de risco' : 'fator de proteção',
+        status: statusItem(item.pol, item.nota),
+        sensivel: item.sensivel === true
+      }));
+
+    // Em bloco insuficiente, nenhuma lista de conclusão é preenchida
+    const itensCriticos = insuficiente
+      ? []
+      : itensDoBloco.filter(item => item.status === 'critico');
+
+    const itensAlerta = insuficiente
+      ? []
+      : itensDoBloco.filter(item => item.status === 'alerta');
+
+    const itensProtetores = insuficiente
+      ? []
+      : itensDoBloco.filter(item => item.status === 'protetor');
+
+    // Itens sensíveis sem resposta são sempre destacados, mesmo em bloco insuficiente
+    const sensiveisOmitidos = itensDoBloco
+      .filter(item => item.sensivel && item.status === 'NR');
+
+    // Bloco insuficiente: só dado bruto isolado, sem conclusão
+    const itensIsolados = insuficiente
+      ? itensDoBloco.filter(item => item.status !== 'NR')
+      : [];
+
+    return {
+      numero,
+      nome: NOMES_BLOCOS[numero],
+      tipo: numero === 5 ? 'indicador de repercussão' : 'fatores de risco e proteção',
+      nivel: resumo.nivel,
+      respondidos: resumo.respondidos,
+      total: resumo.total,
+      itensCriticos,
+      itensAlerta,
+      itensProtetores,
+      sensiveisOmitidos,
+      itensIsolados
+    };
+  });
+
+  return {
+    contexto: {
+      codigo: avaliacao.contexto.id,
+      setor: avaliacao.contexto.setor,
+      cargo: avaliacao.contexto.cargo,
+      turno: avaliacao.contexto.turno
+    },
+    blocos
+  };
+}
+
 // ------------------------------------------------------------
 // 4. DIAGNÓSTICO E TESTES (rodar manualmente, pelo botão Executar)
 // ------------------------------------------------------------
@@ -270,4 +374,17 @@ function testarNiveisDeTodas() {
     );
     Logger.log(avaliacao.contexto.id + ' | ' + resumo.join(' | '));
   }
+}
+
+// Mostra o pacote de dados que seria enviado à IA para uma linha da planilha.
+// Linha 5 = TESTE-004 (resposta incompleta), se a ordem se manteve.
+function testarPacote() {
+  const avaliacao = montarAvaliacao(5);
+  Logger.log(JSON.stringify(montarPacote(avaliacao), null, 2));
+}
+
+// Confere se a chave da API está guardada, sem mostrá-la.
+function testarChave() {
+  const chave = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  Logger.log(chave ? 'Chave encontrada (' + chave.length + ' caracteres)' : 'Chave NÃO encontrada');
 }
