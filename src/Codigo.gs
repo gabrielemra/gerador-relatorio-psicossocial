@@ -83,14 +83,22 @@ function statusItem(pol, nota) {
 }
 
 // ------------------------------------------------------------
-// 3. FUNÇÃO PRINCIPAL DESTA ETAPA
+// 3. FUNÇÕES PRINCIPAIS
 // ------------------------------------------------------------
 
-// Lê a última resposta da planilha e devolve os dados organizados:
+// Lê uma resposta da planilha (a última, se nenhum número de linha for informado)
+// e devolve os dados organizados:
 // { contexto: {...}, itens: [ { id, bloco, pol, nota }, ... ] }
-function montarAvaliacao() {
+function montarAvaliacao(numeroLinha) {
   const aba = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  const linha = aba.getRange(aba.getLastRow(), 1, 1, aba.getLastColumn()).getValues()[0];
+  const linhaLida = numeroLinha || aba.getLastRow();
+
+  // A linha 1 é o cabeçalho; linhas além do fim da planilha não existem
+  if (linhaLida < 2 || linhaLida > aba.getLastRow()) {
+    throw new Error('Linha inválida em montarAvaliacao: ' + linhaLida);
+  }
+
+  const linha = aba.getRange(linhaLida, 1, 1, aba.getLastColumn()).getValues()[0];
 
   // Colunas A a E: carimbo, ID, setor, cargo, turno
   const contexto = {
@@ -111,6 +119,58 @@ function montarAvaliacao() {
   });
 
   return { contexto, itens };
+}
+
+// Resume um bloco: contagens e nível de atenção preliminar.
+// Em bloco com dados insuficientes, devolve os itens respondidos como
+// dado bruto isolado (itensIsolados), sem conclusão sobre o bloco.
+function calcularNivelBloco(itens, numeroBloco) {
+  const doBloco = itens.filter(item => item.bloco === numeroBloco);
+  const comStatus = doBloco.map(item => ({
+    ...item,
+    status: statusItem(item.pol, item.nota)
+  }));
+
+  const total = comStatus.length;
+  const nr = comStatus.filter(item => item.status === 'NR').length;
+  const respondidos = total - nr;
+  const criticos = comStatus.filter(item => item.status === 'critico').length;
+  const alertas = comStatus.filter(item => item.status === 'alerta').length;
+
+  // Itens sensíveis: quais ficaram sem resposta e quais ficaram críticos
+  const sensiveisOmitidos = comStatus
+    .filter(item => item.sensivel && item.status === 'NR')
+    .map(item => item.id);
+  const sensiveisCriticos = comStatus
+    .filter(item => item.sensivel && item.status === 'critico')
+    .map(item => item.id);
+
+  // Decisão do nível, seguindo rigorosamente a ordem das regras:
+  let nivel = '';
+  if (total === 0 || (nr / total) >= 0.5) {
+    nivel = 'Dados insuficientes';
+  } else if (respondidos > 0 && (criticos / respondidos) >= 0.5) {
+    nivel = 'Alto';
+  } else if (criticos >= 1 || (respondidos > 0 && (alertas / respondidos) >= 0.5)) {
+    nivel = 'Moderado';
+  } else {
+    nivel = 'Baixo';
+  }
+
+  const itensIsolados = nivel === 'Dados insuficientes'
+    ? comStatus
+        .filter(item => item.status !== 'NR')
+        .map(item => ({
+          id: item.id,
+          nota: item.nota,
+          status: item.status
+        }))
+    : [];
+
+  return {
+    bloco: numeroBloco, total, respondidos, nr, criticos, alertas,
+    nivel, sensiveisOmitidos, sensiveisCriticos, itensIsolados
+  };
 }
 
 // ------------------------------------------------------------
@@ -175,4 +235,39 @@ function testarStatusDaUltimaResposta() {
     Logger.log('Item ' + item.id + ' (' + item.pol + ') nota ' + item.nota +
                ' -> ' + statusItem(item.pol, item.nota));
   });
+}
+
+// Detalha as contagens e o nível dos 5 blocos da última resposta.
+function testarNiveis() {
+  const avaliacao = montarAvaliacao();
+  [1, 2, 3, 4, 5].forEach(n => {
+    Logger.log(JSON.stringify(calcularNivelBloco(avaliacao.itens, n)));
+  });
+}
+
+// Detalha as contagens e o nível dos 5 blocos de UMA linha da planilha.
+// Troque o número abaixo para escolher a resposta (linha 2 = primeira resposta).
+function testarNiveisDaLinha() {
+  const numeroLinha = 4;
+  const avaliacao = montarAvaliacao(numeroLinha);
+  Logger.log('Avaliação: ' + avaliacao.contexto.id);
+  avaliacao.itens.forEach(item => {
+    Logger.log('Item ' + item.id + ' (' + item.pol + ') nota ' + item.nota +
+               ' -> ' + statusItem(item.pol, item.nota));
+  });
+  [1, 2, 3, 4, 5].forEach(n => {
+    Logger.log(JSON.stringify(calcularNivelBloco(avaliacao.itens, n)));
+  });
+}
+
+// Uma linha por resposta da planilha, com o nível dos 5 blocos.
+function testarNiveisDeTodas() {
+  const aba = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  for (let linha = 2; linha <= aba.getLastRow(); linha++) {
+    const avaliacao = montarAvaliacao(linha);
+    const resumo = [1, 2, 3, 4, 5].map(n =>
+      'B' + n + ': ' + calcularNivelBloco(avaliacao.itens, n).nivel
+    );
+    Logger.log(avaliacao.contexto.id + ' | ' + resumo.join(' | '));
+  }
 }
