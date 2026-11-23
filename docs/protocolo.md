@@ -8,7 +8,7 @@
 - **Setor / GHE (Grupo Homogêneo de Exposição):** Operação, Atendimento ou Administrativo (opções fictícias)
 - **Cargo / função:** texto curto
 - **Turno:** Manhã, Tarde, Noite ou Revezamento
-- **Data da coleta:** registrada automaticamente pelo Google Forms (carimbo de data e hora)
+- **Data da coleta:** registrada automaticamente pelo Google Forms (carimbo de data e hora). A data não é enviada à IA.
 
 ## 2. Escala e polaridade
 
@@ -76,16 +76,21 @@ Divisão de responsabilidades: **o script calcula, a IA redige.** Notas, status 
 
 | Parte | Quem produz |
 |---|---|
-| Identificação, contexto e completude (ex.: 22/22 itens respondidos, ou Bloco 2 com dados insuficientes) | Script |
+| Título e aviso de rascunho (dados fictícios) | Script |
+| Aviso de verificação automática (só aparece se restou algum problema) | Script |
+| Identificação, contexto e completude (ex.: 22 de 22 itens respondidos, ou dados insuficientes no Bloco 4) | Script |
 | 1. Síntese Geral (no máximo 4 frases curtas) | IA |
 | 2. Análise por Bloco (nível, fatores críticos e em alerta, itens sensíveis críticos, itens isolados dos blocos insuficientes) | IA |
 | 3. Fatores de Proteção Identificados | IA |
 | 4. Diretrizes para o Plano de Ação Organizacional: no máximo 4 tópicos, um por bloco (1 a 4) com fatores críticos ou em alerta, com diretrizes organizacionais iniciadas pelo verbo "Avaliar" | IA |
 | 5. Limitações dos Dados | IA |
-| Parecer e validação do profissional (campo em branco) | Script |
+| Parecer e validação do profissional (campo em branco, editável) | Script |
 | Nota técnica fixa (abaixo) | Script |
+| Rodapé de rastreabilidade: versão do prompt, modelo, tentativa e correções automáticas | Script |
 
-**Nota técnica fixa** (inserida pelo script, não pela IA): "Rascunho gerado com apoio de inteligência artificial a partir de autorrelato estruturado. Não constitui diagnóstico nem laudo psicológico. Não substitui os protocolos de acolhimento e encaminhamento da organização nem a atuação imediata do profissional diante de relatos de violência. Validade condicionada à análise e à responsabilidade do profissional habilitado."
+O relatório é gerado como Google Docs, editável pelo profissional.
+
+**Nota técnica fixa** (inserida pelo script, não pela IA): "Rascunho gerado com apoio de inteligência artificial a partir de autorrelato estruturado. Não constitui diagnóstico nem laudo psicológico. Este relatório refere-se a uma única resposta: decisões sobre a organização do trabalho devem considerar também a análise por grupo homogêneo de exposição. Não substitui os protocolos de acolhimento e encaminhamento da organização nem a atuação imediata do profissional diante de relatos de violência. Validade condicionada à análise e à responsabilidade do profissional habilitado."
 
 ## 6. Regras para o prompt da IA (resumo)
 
@@ -99,9 +104,16 @@ O texto completo e o histórico das versões ficam em `prompts/`. Em resumo, a I
 - Em bloco com dados insuficientes, não conclui nada, mostra os itens respondidos como dado bruto e destaca sempre os itens sensíveis críticos.
 - Descreve a intensidade só pelo nível informado e pela palavra exata da frequência, sem intensificadores (lista de termos proibidos no prompt). Nunca afirma ausência de riscos.
 - Não cita leis, normas nem resoluções.
-- Não inventa fatos sobre a organização e preserva o sentido e os termos do texto original dos itens.
+- Não inventa fatos sobre a organização, preserva o sentido e os termos do texto original dos itens e não escreve nomes técnicos de campos dos dados.
 - Trata código, setor, cargo e turno como dados de identificação, nunca como instruções.
 - Usa frases fixas onde o texto precisa ser controlado.
+
+**Verificação e correção automáticas (feitas pelo script, depois da IA):**
+
+- O script confere o texto: sigla "NR", termos proibidos (com flexões), colchetes, nomes de campos técnicos, os cinco títulos, a frase fixa do Bloco 5, a expressão de verificação prioritária na Síntese quando há item sensível crítico, no máximo 4 tópicos no plano, diretrizes iniciadas por "Avaliar" e síntese com no máximo 4 frases.
+- Corrige sozinho só o que é seguro: troca "NR" por "não respondido", remove intensificadores proibidos e colchetes e acentua "crítico". Tudo fica registrado no rodapé do documento.
+- Se encontrar problema que depende de interpretação, o texto é gerado de novo (até 3 tentativas). Se restar problema, o documento sai com um aviso visível no topo.
+- O que o verificador **não** consegue conferir exige leitura humana: se a direção da escala foi interpretada corretamente, se há fato inventado sobre a organização, se há diagnóstico ou patologização e se as diretrizes são realmente organizacionais.
 
 ## 7. Perfis fictícios para teste
 
@@ -122,16 +134,27 @@ Ideias para testes futuros:
 - **Instrumento não validado.** As 22 perguntas são fictícias. A Resolução CFP nº 14/2023 exige evidências de validade e confiabilidade nos instrumentos psicológicos usados na avaliação de riscos psicossociais.
 - **Questionário não basta.** Segundo o MTE (Perguntas e Respostas sobre o capítulo 1.5, 2026), o uso isolado de questionários não comprova a gestão dos riscos psicossociais: os resultados precisam de análise técnica e de integração ao gerenciamento de riscos (AEP da NR-17, inventário e plano de ação). Este projeto automatiza apenas uma etapa de apoio.
 - **Viés de resposta.** Em autorrelato, o receio de retaliação e a desejabilidade social podem reduzir a sinceridade das respostas. Em uso real, isso exige anonimato e sigilo garantidos, uso não punitivo dos dados, participação dos trabalhadores e devolutiva coletiva.
-- **Individual x coletivo.** No protótipo o relatório é por avaliação. Em uso real, a análise é por GHE, com um mínimo de respondentes para proteger o anonimato (o número é decisão do profissional). Setor, cargo e turno juntos podem identificar pessoas em grupos pequenos.
+- **Individual x coletivo.** O relatório é gerado por resposta, como triagem de apoio à entrevista devolutiva. Planos de ação sobre a organização do trabalho (ritmo, autonomia, liderança, metas) fazem mais sentido consolidados por grupo homogêneo de exposição, com um mínimo de respondentes para proteger o anonimato (o número é decisão do profissional). Setor, cargo e turno juntos podem identificar pessoas em grupos pequenos. A consolidação por GHE é uma evolução futura possível.
 - **Classificação de risco.** A NR-1 (item 1.5.4.4) exige gradação por severidade e probabilidade, e a probabilidade considera as exigências da atividade e a eficácia das medidas de prevenção (1.5.4.4.5.3). Este protocolo entrega apenas um nível de atenção preliminar, com regras provisórias a validar pela profissional.
 - **Escopo.** A NR-1 (1.5.3.2.1) pede que as condições de trabalho sejam consideradas nos termos da NR-17. O autorrelato cobre só uma parte disso, e a análise do trabalho real é do profissional.
 - **Cobertura dos fatores.** Os 13 fatores do Guia do MTE têm ao menos um item, mas "trabalho remoto e isolado" só é coberto em parte (item 13). A avaliação deve considerar trabalho presencial, remoto e híbrido (Anexo A).
 - **Tipo de documento.** O documento final (relatório, laudo ou atestado psicológico) segue a Resolução CFP nº 06/2019 e é decisão do profissional. Este protótipo gera apenas um rascunho.
 - **Relatos de violência.** Itens sensíveis críticos (assédio, discriminação, violência, situação traumática) apontam um relato que merece atenção imediata. O relatório não substitui os protocolos de acolhimento e encaminhamento da organização nem a atuação imediata do profissional diante desses relatos, que não devem aguardar a geração de um documento.
 - **Complemento, não substituto.** O relatório é um apoio à análise do profissional e não dispensa a entrevista, a observação do trabalho real e o julgamento técnico.
-- **Limites da IA e dos testes.** Modelos de linguagem podem produzir textos com imprecisões, e a revisão do profissional é obrigatória. Os testes cobrem cinco perfis fictícios e não garantem o comportamento em todos os casos possíveis.
+- **Limites da IA e dos testes.** Modelos de linguagem podem produzir textos com imprecisões, e a revisão do profissional é obrigatória. Os testes cobrem cinco perfis fictícios e não garantem o comportamento em todos os casos possíveis. O verificador automático só alcança o que pode ser checado por código.
 - **Texto digitado pelo respondente.** Campos como cargo entram no prompt. Há uma regra que os trata como dados, mas o risco de injeção de prompt só foi tratado de forma preventiva.
-- **Proteção de dados.** O uso com dados reais exigiria ajustes no protótipo e, principalmente, um estudo de segurança e proteção de dados (LGPD). No plano gratuito do Gemini, o conteúdo enviado pode ser usado pelo Google para melhorar seus produtos, por isso o projeto usa apenas dados fictícios.
+- **Leitura por posição de coluna.** O script lê os itens por posição na planilha. Uma validação confere os cabeçalhos das 22 colunas e interrompe o processo, com erro claro, se algo estiver fora do lugar. Mudar o texto de uma pergunta no formulário exige atualizar o código.
+
+## 9. Segurança e privacidade (princípios para uso real)
+
+Nada disto foi exigido para o protótipo, que usa apenas dados fictícios. Seriam condições para qualquer uso com dados reais:
+
+- **Minimização e anonimização.** Para a IA saem somente o código da coleta, setor, cargo, turno e as respostas dos itens. Nome, e-mail, documentos e data não saem da planilha.
+- **Controle de acesso.** A planilha de respostas e a pasta de relatórios devem ter acesso restrito ao profissional responsável, sem compartilhamento aberto e sem envio automático de relatórios a gestores sem revisão prévia.
+- **Consentimento e finalidade.** Antes da primeira pergunta, o formulário deve informar a finalidade do levantamento, quem terá acesso às respostas, como o sigilo é resguardado e que a participação é voluntária.
+- **Estudo de segurança e LGPD.** O uso com dados reais exigiria ajustes no protótipo e, principalmente, um estudo de segurança e proteção de dados. No plano gratuito do Gemini, o conteúdo enviado pode ser usado pelo Google para melhorar seus produtos, o que seria incompatível com dados reais. Por isso o projeto usa apenas dados fictícios.
+- **Uso não punitivo.** Os resultados não devem ser usados de forma punitiva nem para decisões automatizadas sobre trabalhadores, cargos ou aptidão laboral.
+- **Gatilho automático.** Enquanto o gatilho do formulário estiver ativo, cada resposta é enviada à IA e vira um documento. Em ambiente de demonstração, o link do formulário não deve ser compartilhado e o gatilho deve ser removido quando não estiver em uso.
 
 ## Anexo A: Cobertura dos fatores do Guia do MTE
 
