@@ -60,7 +60,7 @@ Montei o formulário no Google Forms, ligado a uma planilha de respostas.
 - Numerar a escala no texto ("5. Sempre") deixa o script extrair a nota pelo começo do texto.
 - Testei com cinco respostas fictícias (risco alto, protegido, misto, incompleto e sensível em bloco insuficiente), incluindo duas incompletas de propósito.
 
-## Fase 3: Apps Script, leitura e cálculo dos dados (18 a 20/11/2026 — concluída)
+## Fase 3: Apps Script, leitura e cálculo dos dados (18 a 20/11/2026)
 
 Escrevi o código que lê uma resposta da planilha, transforma em uma lista de 22 itens (número, bloco, polaridade e nota), classifica cada item e calcula o nível de atenção de cada bloco.
 
@@ -80,7 +80,7 @@ Escrevi o código que lê uma resposta da planilha, transforma em uma lista de 2
 ### O que aprendi
 
 - Organizar o código em dados fixos, funções pequenas e funções que juntam as peças facilita testar cada parte sozinha.
-- `JSON.stringify` grava datas em horário UTC (o `Z` no final), então a data precisará ser formatada para o horário local no relatório.
+- `JSON.stringify` grava datas em horário UTC (o `Z` no final), então a data precisa ser formatada para o horário local no relatório.
 - O `parseInt` lê o número do começo do texto e ignora o resto. Decidi que o script confia no formato do formulário.
 - **Erro explícito é melhor que resposta silenciosa:** em `statusItem`, uma polaridade ou uma nota inválida lança erro, em vez de devolver "não respondido". Um bloco marcado como insuficiente sem motivo seria um erro difícil de achar.
 - Os testes pegaram casos de borda: um bloco com exatamente 50% de itens críticos saiu Alto, e outro com exatamente 50% em alerta saiu Moderado. Os dois estão certos, porque o protocolo diz "50% ou mais".
@@ -89,7 +89,7 @@ Escrevi o código que lê uma resposta da planilha, transforma em uma lista de 2
 
 - Em bloco com dados insuficientes, o relatório mostra o item respondido **isolado, como dado bruto sinalizado, sem conclusão do bloco**. O que o profissional precisa não é de uma conclusão apressada sobre um bloco incompleto, mas de transparência sem distorção.
 
-## Fase 4: Pacote de dados e conexão com a API (21/11/2026 — concluída)
+## Fase 4: Pacote de dados e conexão com a API (20 a 21/11/2026)
 
 Escrevi a função que monta o pacote de dados enviado à IA e a função que chama a API do Gemini. A chave da API ficou guardada nas Propriedades do script, fora do código.
 
@@ -111,15 +111,17 @@ Escrevi a função que monta o pacote de dados enviado à IA e a função que ch
 - Com `muteHttpExceptions`, o erro vem como resposta e eu decido o que fazer com ele.
 - Segredos ficam fora do código e do GitHub.
 
-## Fase 5: Engenharia do prompt (21/11/2026 — em andamento)
+## Fase 5: Engenharia do prompt (21 a 22/11/2026)
 
-Escrevi o prompt, revisei contra o protocolo e testei nos cinco perfis fictícios. O registro completo de cada versão está na pasta `prompts/`.
+Escrevi o prompt, revisei contra o protocolo, testei nos cinco perfis fictícios e passei a medir cada versão com repetições e um verificador automático. O registro completo de cada versão está na pasta `prompts/` (v1 a v1.4).
 
 ### O que fiz
 
 - **v1:** o prompt original. Antes de rodar, revisei-o contra o protocolo e achei quatro problemas (veja `prompts/v1.md`). O mais importante: um item sensível crítico em bloco com dados insuficientes seria tratado como dado bruto comum.
 - **v1.1:** os quatro ajustes. Testei nos cinco perfis: risco alto, protegido, misto, incompleto e sensível em bloco insuficiente.
-- **v1.2:** ajustes motivados pelos testes (pronta para teste).
+- **v1.2 e v1.3:** ajustes motivados pelos testes (tom, plano de ação, frases fixas, nomes de blocos).
+- **v1.4:** a versão final, com frase fixa para itens sensíveis críticos na síntese e regras mais precisas para o plano de ação.
+- Criei um **verificador automático** do texto gerado e um **teste de repetição** (5 execuções por perfil) para medir a taxa de problemas de cada versão.
 
 ### Erros encontrados
 
@@ -127,13 +129,17 @@ Escrevi o prompt, revisei contra o protocolo e testei nos cinco perfis fictício
 - **Plano de ação com 18 tópicos**, vários em imperativo (e não como diretriz a avaliar), e os colchetes do modelo apareceram literalmente no texto.
 - **Conclusão mais forte que os dados:** "ausência de riscos" num perfil sem itens críticos, o que um autorrelato não permite afirmar.
 - **Erro meu na checklist:** esperei o Bloco 1 em uma linha na TESTE-003, mas os dados tinham dois itens em alerta, e a IA acertou ao descrevê-los.
+- **O instrumento de medição tinha dois defeitos, e eu estava culpando o prompt.** (1) O código lia só a primeira parte da resposta da API, e ela pode vir dividida: os textos "cortados" tinham 19, 114 e 215 caracteres, sem aviso de `finishReason`. (2) O verificador contava como erro a numeração antes do negrito no plano de ação (`- 1. **Bloco**: Avaliar...`). Cheguei a atribuir esse erro a uma regra do prompt, e a hipótese estava errada.
 
 ### O que aprendi
 
 - **Frases fixas funcionam; instruções abstratas de estilo não.** As frases exatas do prompt foram reproduzidas em todos os testes, e "sem alarmismo" foi ignorado. Onde o texto precisa ser controlado, uso frase exata ou lista de termos proibidos.
+- **O modelo varia entre execuções.** A mesma resposta fictícia gerou "não respondido" em uma execução e "NR" em outra. Uma execução isolada não prova nada: preciso de repetições.
+- **Quando um número parece ruim, desconfio primeiro do instrumento de medição.** Dois defeitos meus inflaram todas as taxas de erro. Só descobri porque olhei os detalhes de cada falha: textos de 19 caracteres não são "o modelo errando", e três falhas para três tópicos não são coincidência.
 - Um prompt bom não é só bem escrito: é testado contra casos que tentam quebrá-lo, incluindo respostas incompletas.
 - Testar contra uma checklist exige que a checklist esteja certa.
-- O pacote com frequência por extenso e natureza de cada item resolveu o erro de escala do primeiro teste, que não se repetiu em nenhum dos cinco perfis.
+- O que dá para corrigir com segurança por código (sigla, intensificadores, colchetes, acentuação) eu corrijo e registro; o que depende de interpretação gera uma nova tentativa ou um aviso para o profissional.
+- O verificador **não** substitui a leitura humana: ele confere termos, estrutura e frases obrigatórias, mas não detecta viés, patologização, direção errada da escala nem fato inventado.
 
 ### Decisões
 
@@ -141,7 +147,46 @@ Escrevi o prompt, revisei contra o protocolo e testei nos cinco perfis fictício
 - **Seção de limitações com itens sensíveis críticos:** mesmo com o questionário 100% respondido, manter a frase fixa de completude e acrescentar a sinalização dos itens sensíveis críticos como ponto de verificação prioritária, sem criar alarme e sem concluir além dos dados.
 - **A IA não afirma ausência de riscos.** Um autorrelato sem itens críticos só permite dizer que não foram identificados fatores críticos ou em alerta nos dados informados.
 - O relatório é um **complemento**: não substitui a análise do profissional nem os protocolos de acolhimento e encaminhamento da organização. Isso entrou como limitação e como nota técnica fixa.
+- Formato de saída em **Markdown**, convertido para Google Docs pelo script.
 
-### Próximo passo
+## Fase 6: Relatório em Google Docs (22/11/2026)
 
-- Rodar os mesmos cinco perfis na v1.2 e comparar com a v1.1, procurando melhorias e também regressões.
+O script agora gera o relatório como um Google Docs editável, na pasta Relatórios do Drive.
+
+### O que fiz
+
+- Escrevi a geração do documento: título, aviso de rascunho, tabela de identificação (com a completude, por exemplo "16 de 22 itens respondidos"), as cinco seções formatadas (títulos, listas e negrito, convertidos do Markdown da IA), campo de parecer em branco, nota técnica fixa e rodapé de rastreabilidade (versão do prompt, modelo, tentativa e correções automáticas).
+- Escrevi a limpeza automática e a nova tentativa de geração quando a verificação encontra problema. Se ainda restar problema, o documento sai com um aviso amarelo no topo.
+- Criei uma aba de registro na planilha com data, código, situação e link de cada relatório.
+- Gerei os cinco documentos de teste e conferi um deles item a item.
+
+### O que aprendi
+
+- O documento final precisa se proteger sozinho: o aviso de rascunho, o parecer em branco e a nota técnica fixa (escrita pelo script, nunca pela IA) evitam que alguém trate o arquivo como laudo.
+- Para a IA só saem da planilha o código da coleta, o setor, o cargo, o turno e as respostas dos itens. Nome e data não saem.
+
+## Fase 7: Gatilho automático e revisão externa (22/11/2026)
+
+O relatório passa a ser gerado sozinho quando uma resposta chega pelo formulário.
+
+### O que fiz
+
+- Escrevi o gatilho de envio do formulário, que lê a **linha exata do evento** (e não "a última linha") e usa uma fila (`LockService`) para que envios simultâneos não se atropelem.
+- Escrevi `gerarRelatoriosPendentes`, que gera os relatórios das respostas que ainda não têm documento (por exemplo, enviadas com o gatilho desligado ou que deram erro).
+- Escrevi a validação dos cabeçalhos da planilha: o script lê as colunas por posição, e agora confere se as 22 colunas estão onde deveriam. Se alguém reordenar ou inserir uma coluna, o erro aparece na hora, e não em um relatório com as notas trocadas.
+- Pedi a uma revisão externa (Gemini) e avaliei cada ponto: adotei o que fazia sentido e recusei uma sugestão (limitar a saída a 2048 tokens), porque poderia cortar relatórios longos de verdade.
+
+### O que aprendi
+
+- Um gatilho com dados pode enviar informação sem eu perceber: enquanto ele está ativo, toda resposta vira uma chamada à IA. Em demonstração, o link do formulário não deve ser compartilhado e o gatilho deve ser removido quando não estiver em uso.
+- Uma revisão externa é útil, mas precisa ser avaliada: algumas sugestões já estavam implementadas, uma estava errada (o limite de tokens) e uma frase de apresentação exagerava (dizer que o verificador "barra vieses" quando ele só confere termos e estrutura).
+
+### Decisões
+
+- Rodar o gatilho só durante os testes. Para a demonstração, usar os documentos já gerados.
+
+## Próximos passos
+
+- Medir a v1.4 com o código corrigido (5 execuções por perfil) e registrar a taxa em `prompts/v1.4.md`.
+- Testar o gatilho com uma resposta fictícia real do formulário.
+- Fase 8: revisão final dos cinco documentos e dos testes.
