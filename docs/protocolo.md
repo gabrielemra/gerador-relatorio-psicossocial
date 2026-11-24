@@ -112,7 +112,8 @@ O texto completo e o histórico das versões ficam em `prompts/`. Em resumo, a I
 
 - O script confere o texto: sigla "NR", termos proibidos (com flexões), colchetes, nomes de campos técnicos, os cinco títulos, a frase fixa do Bloco 5, a expressão de verificação prioritária na Síntese quando há item sensível crítico, no máximo 4 tópicos no plano, diretrizes iniciadas por "Avaliar" e síntese com no máximo 4 frases.
 - Corrige sozinho só o que é seguro: troca "NR" por "não respondido", remove intensificadores proibidos e colchetes e acentua "crítico". Tudo fica registrado no rodapé do documento.
-- Se encontrar problema que depende de interpretação, o texto é gerado de novo (até 3 tentativas). Se restar problema, o documento sai com um aviso visível no topo.
+- Se encontrar problema que depende de interpretação, o texto é gerado de novo (até 3 tentativas, com trava de tempo). Se restar problema, o documento sai com um aviso visível no topo.
+- Falhas temporárias da API (como o erro 503) são tratadas com até 4 envios e espera crescente. Se persistirem, o relatório fica registrado como ERRO na aba de registro e pode ser gerado depois.
 - O que o verificador **não** consegue conferir exige leitura humana: se a direção da escala foi interpretada corretamente, se há fato inventado sobre a organização, se há diagnóstico ou patologização e se as diretrizes são realmente organizacionais.
 
 ## 7. Perfis fictícios para teste
@@ -142,6 +143,7 @@ Ideias para testes futuros:
 - **Relatos de violência.** Itens sensíveis críticos (assédio, discriminação, violência, situação traumática) apontam um relato que merece atenção imediata. O relatório não substitui os protocolos de acolhimento e encaminhamento da organização nem a atuação imediata do profissional diante desses relatos, que não devem aguardar a geração de um documento.
 - **Complemento, não substituto.** O relatório é um apoio à análise do profissional e não dispensa a entrevista, a observação do trabalho real e o julgamento técnico.
 - **Limites da IA e dos testes.** Modelos de linguagem podem produzir textos com imprecisões, e a revisão do profissional é obrigatória. Os testes cobrem cinco perfis fictícios e não garantem o comportamento em todos os casos possíveis. O verificador automático só alcança o que pode ser checado por código.
+- **Disponibilidade da API.** A API do modelo pode ficar indisponível por alta demanda (erro 503) ou atingir o limite de requisições. O script tenta de novo com espera crescente e, se não conseguir, registra o relatório como ERRO para ser gerado depois. Em uso real, seria preciso planejar a continuidade do serviço.
 - **Texto digitado pelo respondente.** Campos como cargo entram no prompt. Há uma regra que os trata como dados, mas o risco de injeção de prompt só foi tratado de forma preventiva.
 - **Leitura por posição de coluna.** O script lê os itens por posição na planilha. Uma validação confere os cabeçalhos das 22 colunas e interrompe o processo, com erro claro, se algo estiver fora do lugar. Mudar o texto de uma pergunta no formulário exige atualizar o código.
 
