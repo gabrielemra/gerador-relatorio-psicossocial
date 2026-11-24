@@ -113,8 +113,7 @@ O texto completo e o histórico das versões ficam em `prompts/`. Em resumo, a I
 - O script confere o texto: sigla "NR", termos proibidos (com flexões), colchetes, nomes de campos técnicos, os cinco títulos, a frase fixa do Bloco 5, a expressão de verificação prioritária na Síntese quando há item sensível crítico, no máximo 4 tópicos no plano, diretrizes iniciadas por "Avaliar" e síntese com no máximo 4 frases.
 - Corrige sozinho só o que é seguro: troca "NR" por "não respondido", remove intensificadores proibidos e colchetes e acentua "crítico". Tudo fica registrado no rodapé do documento.
 - Se encontrar problema que depende de interpretação, o texto é gerado de novo (até 3 tentativas, com trava de tempo). Se restar problema, o documento sai com um aviso visível no topo.
-- Falhas temporárias da API (como o erro 503) são tratadas com até 4 envios e espera crescente. Se persistirem, o relatório fica registrado como ERRO na aba de registro e pode ser gerado depois.
-- O que o verificador **não** consegue conferir exige leitura humana: se a direção da escala foi interpretada corretamente, se há fato inventado sobre a organização, se há diagnóstico ou patologização e se as diretrizes são realmente organizacionais.
+- Falhas temporárias da API (como o erro 503) são tratadas com novas tentativas e espera crescente. Se o modelo principal continuar indisponível, o script usa um modelo de reserva (`gemini-3.1-flash-lite`) e registra no rodapé do documento qual modelo gerou o texto. Se todas as tentativas falharem, o relatório fica registrado como ERRO na aba de registro e pode ser gerado depois.
 
 ## 7. Perfis fictícios para teste
 
