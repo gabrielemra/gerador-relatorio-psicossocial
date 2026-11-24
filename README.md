@@ -31,6 +31,7 @@ Um gatilho opcional faz esse caminho rodar sozinho a cada envio do formulário.
 - **Frases fixas onde o texto precisa ser controlado.** Nos testes, as frases exatas do prompt foram reproduzidas em todos os casos, e as instruções abstratas de estilo ("sem alarmismo") foram ignoradas. Por isso o prompt usa frases exatas e listas de termos proibidos.
 - **A saída da IA é verificada por código.** O modelo varia entre execuções: a mesma resposta fictícia gerou "não respondido" em uma execução e a sigla "NR" em outra. Por isso o texto passa por um verificador automático (sigla e termos proibidos, estrutura, frases obrigatórias), o que é seguro corrigir é corrigido por código e registrado no rodapé do documento, e cada versão do prompt é medida com repetições, e não com uma execução isolada. O que o verificador não alcança (direção da escala, fatos inventados, diagnóstico, patologização) exige leitura humana.
 - **Desconfiar primeiro do instrumento de medição.** As primeiras taxas de erro estavam infladas por dois defeitos do meu próprio código (a resposta da API era lida só em parte, e o verificador contava a numeração dos tópicos como erro). O registro completo está em `prompts/` e no diário de bordo.
+- **Falha da API não é falha do prompt.** A API pode ficar indisponível por alta demanda. O código tenta de novo com espera crescente, e a medição separa erro da API de erro do prompt.
 - **A polaridade fica no código.** A marcação de cada item como risco ou proteção não aparece no formulário, para não influenciar quem responde.
 - **O código para quando algo está fora do lugar.** Uma validação confere se as 22 colunas da planilha estão onde o script espera, e erros de nota ou de polaridade interrompem o processo em vez de gerar um relatório errado.
 - **Chave fora do código.** A chave da API fica nas Propriedades do script e nunca no repositório. O nome do modelo e a versão do prompt ficam em constantes únicas.
@@ -77,7 +78,7 @@ As limitações do protocolo estão descritas em [docs/protocolo.md](docs/protoc
 4. Em **Configurações do projeto, Propriedades do script**, crie `GEMINI_API_KEY` com a sua chave do Google AI Studio.
 5. Crie uma pasta chamada `Relatórios` no Drive.
 6. Rode `validarPlanilha` para conferir as colunas e `testarChave` para conferir a chave.
-7. Gere um relatório com `gerarRelatorioPorId('SEU-CODIGO')` ou rode `instalarGatilho` para gerar a cada envio do formulário (e `removerGatilho` para desligar).
+7. Gere um relatório com `gerarRelatorioPorId('SEU-CODIGO')`, ou rode `instalarGatilho` para gerar a cada envio do formulário (e `removerGatilho` para desligar). Respostas que ficaram sem relatório (por exemplo, por falha da API) são geradas com `gerarRelatoriosPendentes`.
 
 ## Status
 
@@ -88,15 +89,15 @@ Em desenvolvimento.
 - Fase 2: formulário e planilha de respostas (concluída)
 - Fase 3: leitura, conversão e cálculo dos níveis por bloco (concluída)
 - Fase 4: pacote de dados e conexão com a API do Gemini (concluída)
-- Fase 5: engenharia do prompt, versões v1 a v1.4 (concluída; medição final da v1.4 em andamento)
+- Fase 5: engenharia do prompt, versões v1 a v1.4 (concluída)
 - Fase 6: geração do relatório em Google Docs (concluída)
-- Fase 7: gatilho automático e revisão externa (concluída; teste com envio real do formulário em andamento)
-- Fase 8: testes finais e revisão dos documentos (em andamento)
+- Fase 7: gatilho automático, resiliência da API e revisão externa (concluída)
+- Fase 8: testes finais (em andamento: medição completa da v1.4 e teste do gatilho com envio real)
 - Fase 9: vitrine, post e publicação (próxima)
 
 ## Testes
 
-O código tem funções de teste que rodam pelo editor do Apps Script. Elas usam respostas fictícias: risco alto, ambiente protegido, perfil misto, uma resposta incompleta e um caso sensível em bloco insuficiente. Os testes conferem a conversão das notas, a classificação dos itens, os casos de borda (50% exatos), os erros para dados inválidos, a validação das colunas, o pacote enviado à IA, a conexão com a API, o verificador e a limpeza do texto, e o documento gerado em cada perfil. Para o texto da IA, uma função de repetição executa o mesmo perfil várias vezes para medir a taxa de problemas de cada versão do prompt. Os resultados estão registrados em `prompts/`.
+O código tem funções de teste que rodam pelo editor do Apps Script. Elas usam respostas fictícias: risco alto, ambiente protegido, perfil misto, uma resposta incompleta e um caso sensível em bloco insuficiente. Os testes conferem a conversão das notas, a classificação dos itens, os casos de borda (50% exatos), os erros para dados inválidos, a validação das colunas, o pacote enviado à IA, a conexão com a API, o verificador e a limpeza do texto, e o documento gerado em cada perfil. Para o texto da IA, uma função de repetição executa o mesmo perfil várias vezes para medir a taxa de problemas de cada versão do prompt, separando erros da API de erros do prompt. Os resultados estão registrados em `prompts/`.
 
 ## Estrutura do repositório
 
