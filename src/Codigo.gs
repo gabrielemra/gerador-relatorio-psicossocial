@@ -9,6 +9,13 @@
 // Modelo de IA usado nas chamadas. Para trocar de modelo, mude só aqui.
 const MODELO = 'gemini-3.5-flash-lite';
 
+// Modelo de reserva, usado quando o principal fica indisponível por alta demanda.
+// Deixe vazio ('') para desligar a reserva.
+const MODELO_RESERVA = 'gemini-3.1-flash-lite';
+
+// Guarda qual modelo respondeu na última chamada (aparece no rodapé do documento).
+let ultimoModeloUsado = MODELO;
+
 // Versão do prompt em uso. Escolhe qual texto de INSTRUCOES é enviado.
 // Histórico, testes e comparação: pasta prompts/ do repositório.
 const VERSAO_PROMPT = 'v1.4';
@@ -417,18 +424,18 @@ function montarPacote(avaliacao) {
   };
 }
 
-// Envia uma instrução e um texto ao Gemini e devolve o texto da resposta.
-// Em erros temporários (429, 500, 503) espera e tenta de novo, até 4 envios no total.
+// Envia uma instrução e um texto a UM modelo do Gemini e devolve o texto da resposta.
+// Em erros temporários (429, 500, 503) espera e tenta de novo, até "maxEnvios" envios.
 // Junta todas as partes da resposta (ela pode vir dividida) e avisa se não
-// terminou normalmente.
-function chamarGemini(instrucaoSistema, textoUsuario) {
+// terminou normalmente. Se falhar, o erro leva a marca "temporario" (true/false).
+function chamarGeminiComModelo(modelo, instrucaoSistema, textoUsuario, maxEnvios) {
   const chave = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!chave) {
     throw new Error('GEMINI_API_KEY não encontrada nas propriedades do script.');
   }
 
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-              MODELO + ':generateContent';
+              modelo + ':generateContent';
 
   const payload = {
     system_instruction: { parts: [{ text: instrucaoSistema }] },
@@ -443,11 +450,10 @@ function chamarGemini(instrucaoSistema, textoUsuario) {
     muteHttpExceptions: true  // para ler a mensagem de erro em vez de o script quebrar
   };
 
-  const MAX_ENVIOS = 4;
   let codigo = 0;
   let corpo = '';
 
-  for (let envio = 1; envio <= MAX_ENVIOS; envio++) {
+  for (let envio = 1; envio <= maxEnvios; envio++) {
     const resposta = UrlFetchApp.fetch(url, opcoes);
     codigo = resposta.getResponseCode();
     corpo = resposta.getContentText();
@@ -456,16 +462,21 @@ function chamarGemini(instrucaoSistema, textoUsuario) {
       break;
     }
 
-    // Erros temporários: espera cada vez mais (8 s, 16 s, 32 s) e tenta de novo
     const temporario = codigo === 429 || codigo === 500 || codigo === 503;
-    if (temporario && envio < MAX_ENVIOS) {
+
+    // Erros temporários: espera cada vez mais (8 s, 16 s, 32 s) e tenta de novo
+    if (temporario && envio < maxEnvios) {
       const espera = 8000 * Math.pow(2, envio - 1);
-      Logger.log('API indisponível (HTTP ' + codigo + '). Nova tentativa em ' + (espera / 1000) + ' s.');
+      Logger.log('API indisponível (HTTP ' + codigo + ', ' + modelo + '). Nova tentativa em ' +
+                 (espera / 1000) + ' s.');
       Utilities.sleep(espera);
       continue;
     }
 
-    throw new Error('Erro na API Gemini (HTTP ' + codigo + '): ' + corpo.substring(0, 300));
+    const erro = new Error('Erro na API Gemini (HTTP ' + codigo + ', ' + modelo + '): ' +
+                           corpo.substring(0, 300));
+    erro.temporario = temporario;
+    throw erro;
   }
 
   // Transforma o corpo em objeto
@@ -490,14 +501,33 @@ function chamarGemini(instrucaoSistema, textoUsuario) {
     .join('');
 
   if (!texto) {
-    throw new Error('Resposta da API Gemini sem texto válido em candidates.');
+    const erro = new Error('Resposta da API Gemini sem texto válido em candidates.');
+    erro.temporario = false;
+    throw erro;
   }
 
+  ultimoModeloUsado = modelo;
   return texto;
 }
 
+// Chama o modelo principal e, se ele estiver indisponível por alta demanda ou
+// limite (erro temporário), usa o modelo de reserva.
+function chamarGemini(instrucaoSistema, textoUsuario) {
+  try {
+    return chamarGeminiComModelo(MODELO, instrucaoSistema, textoUsuario, 2);
+  } catch (erro) {
+    const podeUsarReserva = erro.temporario && MODELO_RESERVA && MODELO_RESERVA !== MODELO;
+    if (!podeUsarReserva) {
+      throw erro;
+    }
+    Logger.log('Modelo ' + MODELO + ' indisponível. Usando o modelo de reserva ' + MODELO_RESERVA + '.');
+    return chamarGeminiComModelo(MODELO_RESERVA, instrucaoSistema, textoUsuario, 3);
+  }
+}
+
 // Gera o relatório de uma linha da planilha (a última, se não informada).
-// Devolve o texto, o pacote de dados usado e o contexto (com a data da coleta).
+// Devolve o texto, o pacote de dados usado, o contexto (com a data da coleta)
+// e o modelo que realmente respondeu.
 function gerarRelatorioComPacote(numeroLinha) {
   const instrucao = INSTRUCOES[VERSAO_PROMPT];
   if (!instrucao) {
@@ -509,7 +539,7 @@ function gerarRelatorioComPacote(numeroLinha) {
   const entrada = 'Dados da avaliação (JSON):\n' + JSON.stringify(pacote);
   const texto = chamarGemini(instrucao, entrada);
 
-  return { texto, pacote, contexto: avaliacao.contexto };
+  return { texto, pacote, contexto: avaliacao.contexto, modelo: ultimoModeloUsado };
 }
 
 // Gera só o texto do relatório de uma linha da planilha.
@@ -743,6 +773,7 @@ function gerarRelatorioValidado(numeroLinha) {
       texto: limpo.texto,
       pacote: bruto.pacote,
       contexto: bruto.contexto,
+      modelo: bruto.modelo,
       problemas: problemas,
       correcoes: limpo.correcoes
     };
@@ -759,7 +790,7 @@ function gerarRelatorioValidado(numeroLinha) {
 
     if (tentativa < MAX_TENTATIVAS) {
       // Segurança: o Apps Script interrompe a execução depois de 6 minutos
-      if (Date.now() - inicio > 210000) {
+      if (Date.now() - inicio > 150000) {
         Logger.log('Tempo limite próximo: ficando com a melhor tentativa.');
         break;
       }
@@ -884,9 +915,12 @@ function criarDocumentoRelatorio(resultado) {
   corpo.appendParagraph('Nota técnica').setHeading(DocumentApp.ParagraphHeading.HEADING3);
   corpo.appendParagraph(NOTA_TECNICA).setItalic(true);
 
-  // Rodapé de rastreabilidade
-  let rodape = 'Gerado com o prompt ' + VERSAO_PROMPT + ' e o modelo ' + MODELO +
+  // Rodapé de rastreabilidade (com o modelo que realmente gerou o texto)
+  let rodape = 'Gerado com o prompt ' + VERSAO_PROMPT + ' e o modelo ' + resultado.modelo +
                ' (tentativa ' + resultado.tentativas + ' de ' + MAX_TENTATIVAS + ').';
+  if (resultado.modelo !== MODELO) {
+    rodape += ' O modelo principal (' + MODELO + ') estava indisponível.';
+  }
   if (resultado.correcoes.length > 0) {
     rodape += ' Correções automáticas aplicadas: ' + resultado.correcoes.join('; ') + '.';
   }
@@ -1165,13 +1199,27 @@ function testarChave() {
   Logger.log(chave ? 'Chave encontrada (' + chave.length + ' caracteres)' : 'Chave NÃO encontrada');
 }
 
-// Teste de conexão com o Gemini, só com texto inventado (nenhum dado do projeto).
+// Teste de conexão com o Gemini (modelo principal, com reserva automática),
+// só com texto inventado (nenhum dado do projeto).
 function testarGemini() {
   const resposta = chamarGemini(
     'Você responde em português, em uma frase curta.',
     'Diga olá e avise que este é um teste de conexão.'
   );
   Logger.log(resposta);
+  Logger.log('Modelo que respondeu: ' + ultimoModeloUsado);
+}
+
+// Testa SÓ o modelo principal, sem reserva (mostra se ele está disponível agora).
+function testarModeloPrincipal() {
+  Logger.log(chamarGeminiComModelo(MODELO, 'Responda em português, em uma frase curta.',
+                                   'Diga olá.', 1));
+}
+
+// Testa SÓ o modelo de reserva (confere se o código do modelo está certo).
+function testarModeloReserva() {
+  Logger.log(chamarGeminiComModelo(MODELO_RESERVA, 'Responda em português, em uma frase curta.',
+                                   'Diga olá.', 2));
 }
 
 // Gera e imprime o texto bruto de UMA linha da planilha (dados fictícios).
@@ -1187,7 +1235,8 @@ function relatorioPorId(id) {
   const resultado = gerarRelatorioComPacote(linha);
   const problemas = verificarTudo(resultado.texto, resultado.pacote);
 
-  Logger.log('===== ' + id + ' (linha ' + linha + ', prompt ' + VERSAO_PROMPT + ') =====');
+  Logger.log('===== ' + id + ' (linha ' + linha + ', prompt ' + VERSAO_PROMPT +
+             ', modelo ' + resultado.modelo + ') =====');
   Logger.log(resultado.texto);
   Logger.log('Verificação automática: ' + (problemas.length ? problemas.join(' | ') : 'sem problemas'));
 }
@@ -1211,6 +1260,7 @@ function testarRelatorioTodos() {
 // Roda o mesmo perfil várias vezes e conta quantas saíram com problema.
 // Mede o PROMPT: a verificação é feita no texto bruto, antes da limpeza automática.
 // Erros da API (como o 503) não contam contra o prompt: são registrados à parte.
+// Cada execução mostra o modelo que respondeu, para não misturar modelos sem saber.
 // O modelo varia entre execuções: uma execução isolada não prova que a regra funciona.
 function repetirPerfil(id, repeticoes) {
   const inicio = Date.now();
@@ -1219,6 +1269,7 @@ function repetirPerfil(id, repeticoes) {
   let validas = 0;
   let comProblema = 0;
   let errosDeApi = 0;
+  let comReserva = 0;
 
   for (let i = 1; i <= repeticoes; i++) {
     // Segurança: o Apps Script interrompe a execução depois de 6 minutos
@@ -1231,8 +1282,12 @@ function repetirPerfil(id, repeticoes) {
       const resultado = gerarRelatorioComPacote(linha);
       const problemas = verificarTudo(resultado.texto, resultado.pacote);
       validas++;
+      if (resultado.modelo !== MODELO) {
+        comReserva++;
+      }
 
-      Logger.log('Execução ' + i + ': ' + (problemas.length ? problemas.join(' | ') : 'sem problemas'));
+      Logger.log('Execução ' + i + ' [' + resultado.modelo + ']: ' +
+                 (problemas.length ? problemas.join(' | ') : 'sem problemas'));
       if (problemas.length > 0) {
         comProblema++;
         detalhesDosProblemas(resultado.texto).slice(0, 3).forEach(detalhe => {
@@ -1254,7 +1309,8 @@ function repetirPerfil(id, repeticoes) {
   }
 
   Logger.log(id + ': ' + comProblema + ' de ' + validas + ' execuções válidas com problema' +
-             ' (prompt ' + VERSAO_PROMPT + '); ' + errosDeApi + ' erro(s) da API.');
+             ' (prompt ' + VERSAO_PROMPT + '); ' + comReserva + ' com o modelo de reserva; ' +
+             errosDeApi + ' erro(s) da API.');
   Logger.log('Resumo por problema: ' + JSON.stringify(contagem));
 }
 
