@@ -418,8 +418,9 @@ function montarPacote(avaliacao) {
 }
 
 // Envia uma instrução e um texto ao Gemini e devolve o texto da resposta.
-// Tenta de novo em erros temporários (429, 500, 503), junta todas as partes da
-// resposta (ela pode vir dividida) e avisa se não terminou normalmente.
+// Em erros temporários (429, 500, 503) espera e tenta de novo, até 4 envios no total.
+// Junta todas as partes da resposta (ela pode vir dividida) e avisa se não
+// terminou normalmente.
 function chamarGemini(instrucaoSistema, textoUsuario) {
   const chave = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!chave) {
@@ -442,10 +443,11 @@ function chamarGemini(instrucaoSistema, textoUsuario) {
     muteHttpExceptions: true  // para ler a mensagem de erro em vez de o script quebrar
   };
 
+  const MAX_ENVIOS = 4;
   let codigo = 0;
   let corpo = '';
 
-  for (let tentativa = 1; tentativa <= 3; tentativa++) {
+  for (let envio = 1; envio <= MAX_ENVIOS; envio++) {
     const resposta = UrlFetchApp.fetch(url, opcoes);
     codigo = resposta.getResponseCode();
     corpo = resposta.getContentText();
@@ -454,10 +456,12 @@ function chamarGemini(instrucaoSistema, textoUsuario) {
       break;
     }
 
-    // Erros temporários: espera um pouco e tenta de novo
+    // Erros temporários: espera cada vez mais (8 s, 16 s, 32 s) e tenta de novo
     const temporario = codigo === 429 || codigo === 500 || codigo === 503;
-    if (temporario && tentativa < 3) {
-      Utilities.sleep(10000 * tentativa);
+    if (temporario && envio < MAX_ENVIOS) {
+      const espera = 8000 * Math.pow(2, envio - 1);
+      Logger.log('API indisponível (HTTP ' + codigo + '). Nova tentativa em ' + (espera / 1000) + ' s.');
+      Utilities.sleep(espera);
       continue;
     }
 
@@ -475,7 +479,6 @@ function chamarGemini(instrucaoSistema, textoUsuario) {
   }
 
   // A resposta pode vir dividida em várias partes: junta todas as partes de texto.
-  // (Ler só a primeira parte cortava o relatório logo depois do primeiro título.)
   const partes = (candidato && candidato.content && candidato.content.parts) || [];
   if (partes.length > 1) {
     Logger.log('Nota: resposta recebida em ' + partes.length + ' partes (unidas).');
@@ -725,6 +728,7 @@ function limparTexto(texto) {
 // Fica com a melhor tentativa (a com menos problemas). Se ainda restarem problemas,
 // eles são devolvidos para aparecerem como alerta no documento.
 function gerarRelatorioValidado(numeroLinha) {
+  const inicio = Date.now();
   let melhor = null;
   let tentativasUsadas = 0;
 
@@ -752,7 +756,13 @@ function gerarRelatorioValidado(numeroLinha) {
     }
 
     Logger.log('Tentativa ' + tentativa + ' com problemas: ' + problemas.join(' | '));
+
     if (tentativa < MAX_TENTATIVAS) {
+      // Segurança: o Apps Script interrompe a execução depois de 6 minutos
+      if (Date.now() - inicio > 210000) {
+        Logger.log('Tempo limite próximo: ficando com a melhor tentativa.');
+        break;
+      }
       Utilities.sleep(4000);
     }
   }
@@ -1200,32 +1210,51 @@ function testarRelatorioTodos() {
 
 // Roda o mesmo perfil várias vezes e conta quantas saíram com problema.
 // Mede o PROMPT: a verificação é feita no texto bruto, antes da limpeza automática.
+// Erros da API (como o 503) não contam contra o prompt: são registrados à parte.
 // O modelo varia entre execuções: uma execução isolada não prova que a regra funciona.
 function repetirPerfil(id, repeticoes) {
+  const inicio = Date.now();
   const linha = encontrarLinhaPorId(id);
   const contagem = {};
+  let validas = 0;
   let comProblema = 0;
+  let errosDeApi = 0;
 
   for (let i = 1; i <= repeticoes; i++) {
-    const resultado = gerarRelatorioComPacote(linha);
-    const problemas = verificarTudo(resultado.texto, resultado.pacote);
-
-    Logger.log('Execução ' + i + ': ' + (problemas.length ? problemas.join(' | ') : 'sem problemas'));
-    if (problemas.length > 0) {
-      comProblema++;
-      detalhesDosProblemas(resultado.texto).slice(0, 3).forEach(detalhe => {
-        Logger.log('   detalhe: ' + detalhe);
-      });
+    // Segurança: o Apps Script interrompe a execução depois de 6 minutos
+    if (Date.now() - inicio > 270000) {
+      Logger.log('Tempo limite próximo: parando na execução ' + i + '.');
+      break;
     }
-    problemas.forEach(problema => {
-      contagem[problema] = (contagem[problema] || 0) + 1;
-    });
+
+    try {
+      const resultado = gerarRelatorioComPacote(linha);
+      const problemas = verificarTudo(resultado.texto, resultado.pacote);
+      validas++;
+
+      Logger.log('Execução ' + i + ': ' + (problemas.length ? problemas.join(' | ') : 'sem problemas'));
+      if (problemas.length > 0) {
+        comProblema++;
+        detalhesDosProblemas(resultado.texto).slice(0, 3).forEach(detalhe => {
+          Logger.log('   detalhe: ' + detalhe);
+        });
+      }
+      problemas.forEach(problema => {
+        contagem[problema] = (contagem[problema] || 0) + 1;
+      });
+    } catch (erro) {
+      errosDeApi++;
+      Logger.log('Execução ' + i + ': erro da API (não conta contra o prompt): ' +
+                 String(erro.message).substring(0, 80));
+      Utilities.sleep(20000);
+      continue;
+    }
 
     Utilities.sleep(5000);
   }
 
-  Logger.log(id + ': ' + comProblema + ' de ' + repeticoes +
-             ' com problema (prompt ' + VERSAO_PROMPT + ')');
+  Logger.log(id + ': ' + comProblema + ' de ' + validas + ' execuções válidas com problema' +
+             ' (prompt ' + VERSAO_PROMPT + '); ' + errosDeApi + ' erro(s) da API.');
   Logger.log('Resumo por problema: ' + JSON.stringify(contagem));
 }
 
