@@ -135,7 +135,7 @@ Escrevi o prompt, revisei contra o protocolo, testei nos cinco perfis fictícios
 
 - **Frases fixas funcionam; instruções abstratas de estilo não.** As frases exatas do prompt foram reproduzidas em todos os testes, e "sem alarmismo" foi ignorado. Onde o texto precisa ser controlado, uso frase exata ou lista de termos proibidos.
 - **O modelo varia entre execuções.** A mesma resposta fictícia gerou "não respondido" em uma execução e "NR" em outra. Uma execução isolada não prova nada: preciso de repetições.
-- **Quando um número parece ruim, desconfio primeiro do instrumento de medição.** Dois defeitos meus inflaram todas as taxas de erro. Só descobri porque olhei os detalhes de cada falha: textos de 19 caracteres não são "o modelo errando", e três falhas para três tópicos não são coincidência.
+- **Quando um número parece ruim, desconfio primeiro do instrumento de medição.** Dois defeitos meus inflaram todas as taxas de erro. Só descobri porque olhei os detalhes de cada falha: textos de 19 caracteres não são "o modelo errando", e três falhas para três tópicos não são coincidência. Depois da correção, o log mostrou "resposta recebida em 2 partes" em 3 de 7 respostas e nenhum "títulos: 1".
 - Um prompt bom não é só bem escrito: é testado contra casos que tentam quebrá-lo, incluindo respostas incompletas.
 - Testar contra uma checklist exige que a checklist esteja certa.
 - O que dá para corrigir com segurança por código (sigla, intensificadores, colchetes, acentuação) eu corrijo e registro; o que depende de interpretação gera uma nova tentativa ou um aviso para o profissional.
@@ -165,28 +165,34 @@ O script agora gera o relatório como um Google Docs editável, na pasta Relató
 - O documento final precisa se proteger sozinho: o aviso de rascunho, o parecer em branco e a nota técnica fixa (escrita pelo script, nunca pela IA) evitam que alguém trate o arquivo como laudo.
 - Para a IA só saem da planilha o código da coleta, o setor, o cargo, o turno e as respostas dos itens. Nome e data não saem.
 
-## Fase 7: Gatilho automático e revisão externa (22/11/2026)
+## Fase 7: Gatilho automático, resiliência e revisão externa (22 a 23/11/2026)
 
-O relatório passa a ser gerado sozinho quando uma resposta chega pelo formulário.
+O relatório passa a ser gerado sozinho quando uma resposta chega pelo formulário, e o código passou a lidar com falhas.
 
 ### O que fiz
 
 - Escrevi o gatilho de envio do formulário, que lê a **linha exata do evento** (e não "a última linha") e usa uma fila (`LockService`) para que envios simultâneos não se atropelem.
 - Escrevi `gerarRelatoriosPendentes`, que gera os relatórios das respostas que ainda não têm documento (por exemplo, enviadas com o gatilho desligado ou que deram erro).
 - Escrevi a validação dos cabeçalhos da planilha: o script lê as colunas por posição, e agora confere se as 22 colunas estão onde deveriam. Se alguém reordenar ou inserir uma coluna, o erro aparece na hora, e não em um relatório com as notas trocadas.
-- Pedi a uma revisão externa (Gemini) e avaliei cada ponto: adotei o que fazia sentido e recusei uma sugestão (limitar a saída a 2048 tokens), porque poderia cortar relatórios longos de verdade.
+- Pedi uma revisão externa (ao Gemini) e avaliei cada ponto: adotei o que fazia sentido e recusei uma sugestão (limitar a saída a 2048 tokens), porque poderia cortar relatórios longos de verdade.
+- A API do Gemini devolveu erro 503 por alta demanda durante os testes de repetição. O código passou a tentar até 4 vezes com espera crescente (8, 16 e 32 segundos), o teste de repetição passou a separar erro da API de erro do prompt, e uma trava de tempo evita estourar o limite de 6 minutos do Apps Script.
 
 ### O que aprendi
 
 - Um gatilho com dados pode enviar informação sem eu perceber: enquanto ele está ativo, toda resposta vira uma chamada à IA. Em demonstração, o link do formulário não deve ser compartilhado e o gatilho deve ser removido quando não estiver em uso.
 - Uma revisão externa é útil, mas precisa ser avaliada: algumas sugestões já estavam implementadas, uma estava errada (o limite de tokens) e uma frase de apresentação exagerava (dizer que o verificador "barra vieses" quando ele só confere termos e estrutura).
+- APIs falham, e uma falha da API não é uma falha do prompt. Uma medição boa separa as duas coisas.
 
 ### Decisões
 
 - Rodar o gatilho só durante os testes. Para a demonstração, usar os documentos já gerados.
 
-## Próximos passos
+## Fase 8: Testes finais (23/11/2026, em andamento)
 
-- Medir a v1.4 com o código corrigido (5 execuções por perfil) e registrar a taxa em `prompts/v1.4.md`.
-- Testar o gatilho com uma resposta fictícia real do formulário.
-- Fase 8: revisão final dos cinco documentos e dos testes.
+- `validarPlanilha` e `testarVerificador` passaram.
+- Medição da v1.4 com o código corrigido: TESTE-005 com 1 de 5 (nome técnico de campo no texto, tratado pela geração de novo); TESTE-001 com duas execuções válidas; TESTE-004 sem execuções válidas por causa do 503. Os números completos estão em `prompts/v1.4.md`.
+
+### Próximos passos
+
+- Repetir a TESTE-004 e a TESTE-001 quando a API estiver estável e registrar a taxa em `prompts/v1.4.md`.
+- Testar o gatilho com uma resposta fictícia enviada pelo formulário.
