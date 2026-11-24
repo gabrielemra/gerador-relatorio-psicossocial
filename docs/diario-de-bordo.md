@@ -176,12 +176,14 @@ O relatório passa a ser gerado sozinho quando uma resposta chega pelo formulár
 - Escrevi a validação dos cabeçalhos da planilha: o script lê as colunas por posição, e agora confere se as 22 colunas estão onde deveriam. Se alguém reordenar ou inserir uma coluna, o erro aparece na hora, e não em um relatório com as notas trocadas.
 - Pedi uma revisão externa (ao Gemini) e avaliei cada ponto: adotei o que fazia sentido e recusei uma sugestão (limitar a saída a 2048 tokens), porque poderia cortar relatórios longos de verdade.
 - A API do Gemini devolveu erro 503 por alta demanda durante os testes de repetição. O código passou a tentar até 4 vezes com espera crescente (8, 16 e 32 segundos), o teste de repetição passou a separar erro da API de erro do prompt, e uma trava de tempo evita estourar o limite de 6 minutos do Apps Script.
+- A API devolveu erro 503 de forma persistente por vários minutos (os testes de repetição e o relatório do gatilho falharam). Acrescentei um modelo de reserva, conferido na lista oficial de modelos do Google, e o rodapé do documento passou a registrar qual modelo gerou o texto.
 
 ### O que aprendi
 
 - Um gatilho com dados pode enviar informação sem eu perceber: enquanto ele está ativo, toda resposta vira uma chamada à IA. Em demonstração, o link do formulário não deve ser compartilhado e o gatilho deve ser removido quando não estiver em uso.
 - Uma revisão externa é útil, mas precisa ser avaliada: algumas sugestões já estavam implementadas, uma estava errada (o limite de tokens) e uma frase de apresentação exagerava (dizer que o verificador "barra vieses" quando ele só confere termos e estrutura).
 - APIs falham, e uma falha da API não é uma falha do prompt. Uma medição boa separa as duas coisas.
+- Resiliência tem duas camadas: tentar de novo (para quedas curtas) e ter um plano B (para quedas longas). Também precisei decidir o que muda na medição quando o modelo muda: ela fica registrada com o modelo usado.
 
 ### Decisões
 
