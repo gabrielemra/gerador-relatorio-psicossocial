@@ -1328,11 +1328,11 @@ function gerarRelatorioPorId(id) {
   return url;
 }
 
-// Gera o documento de um perfil (para conferir o resultado no Drive).
+// Gera o documento de um perfil.
 function testarDocumento005() { gerarRelatorioPorId('TESTE-005'); }
 function testarDocumento004() { gerarRelatorioPorId('TESTE-004'); }
 
-// Gera os cinco documentos de teste (bom para os prints do portfólio).
+// Gera os cinco documentos de teste.
 function gerarDocumentosDeTeste() {
   ['TESTE-001', 'TESTE-002', 'TESTE-003', 'TESTE-004', 'TESTE-005'].forEach(id => {
     gerarRelatorioPorId(id);
